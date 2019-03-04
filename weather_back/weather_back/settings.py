@@ -96,3 +96,12 @@ ITEM_PIPELINES = {
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+import datetime
+to_day = datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+log_file_path = "log/" + to_day + ".log"
+LOG_FILE = log_file_path
+LOG_ENCODING = 'utf-8'
+LOG_LEVEL = 'DEBUG'
+# 如果是True ，进程当中，所有标准输出（包括错误）将会被重定向到log中
+LOG_STDOUT = True
