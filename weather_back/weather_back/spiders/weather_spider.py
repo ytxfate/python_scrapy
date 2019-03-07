@@ -1,5 +1,5 @@
 import scrapy
-from scrapy import log
+import logging
 import re
 import json
 import datetime
@@ -11,6 +11,10 @@ import config
 
 # now date
 now_date_str = datetime.datetime.now().strftime('%Y-%m-%d')
+to_day = datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+logging.FileHandler(filename='log/' + to_day + '.log', mode='a', encoding='utf-8')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class WeatherSpider(scrapy.Spider):
     name = "weather_root"
@@ -46,7 +50,7 @@ class WeatherSpider(scrapy.Spider):
                 yield item
                 # 请求新的连接
                 yield scrapy.Request(a_href, callback=self.parse_county)
-            log.msg('get all county area urls ending.')
+            logger.info('get all county area urls ending.')
         else:
             yield scrapy.Request(response.url, callback=self.parse)
     
@@ -112,7 +116,7 @@ class WeatherSpider(scrapy.Spider):
             "name": title,
             "weather_info": format_weather_info
         }
-        log.msg('seven weather ' + title)
+        logger.info('seven weather ' + title)
         self.collection_seven_days_weather.insert(dict_insert_mongo)
 
     def format_hours_weather_info(self, dict_tmp):
@@ -190,10 +194,6 @@ class WeatherSpider(scrapy.Spider):
         
         dds_end = div_info.xpath('//div[@class="lv"]/dl/dd/text()').extract()
 
-        # log.msg('===========================')
-        # log.msg(headers_end)
-        # log.msg(ems_end)
-        # log.msg(dds_end)
         # 组合数据
         list_end = []
         for i, key in enumerate(headers_end):
@@ -220,7 +220,6 @@ class WeatherSpider(scrapy.Spider):
                     'county':title[:2],
                     "life_info": list_end
                 }
-            # log.msg(dict_insert_mongo)
             self.collection_life_weather.insert(dict_insert_mongo)
 
     def parse_county(self, response):
@@ -294,7 +293,7 @@ class WeatherSpider(scrapy.Spider):
                 'county':web_title[:2],
                 "weather_info": format_weather_info
             }
-            log.msg('seven weather ' + title)
+            logger.info('seven weather ' + title)
             self.collection_seven_days_weather.insert(dict_insert_mongo)
         else:
             yield scrapy.Request(response.url, callback=self.parse_township_seven)
