@@ -25,6 +25,9 @@ xml_str = resp.text
 dict_tmp = {}
 root = ET.fromstring(xml_str.replace('&#10;', ''))
 dict_tmp[root.tag] = root.attrib
+if 'dt' in dict_tmp[root.tag]:
+    dict_tmp[root.tag]['dt'] = dict_tmp[root.tag]['dt'][:8]
+    
 for father in root:
     dict_tmp[root.tag][father.tag] = {'Station': []}
     for child in father:
