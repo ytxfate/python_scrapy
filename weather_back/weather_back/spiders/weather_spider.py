@@ -32,6 +32,11 @@ class WeatherSpider(scrapy.Spider):
         self.collection_tf_hours_weather = mongo_db.get_collection('tf_hours_weather')
         self.collection_life_weather = mongo_db.get_collection('life_weather')
         self.collection_scrapy_stats = mongo_db.get_collection('scrapy_stats')
+        # 删除日期为当天的数据(如果有的话)
+        self.collection_seven_days_weather.remove({"date": now_date_str})
+        self.collection_tf_hours_weather.remove({"date": now_date_str})
+        self.collection_life_weather.remove({"date": now_date_str})
+        self.collection_scrapy_stats.remove({"date": now_date_str})
         
     def parse(self, response):
         """
@@ -321,10 +326,30 @@ class WeatherSpider(scrapy.Spider):
             yield scrapy.Request(response.url, callback=self.parse_township_table_life)
 
     def spider_stopped(self):
+        """
+        提取采集数据
+        """
         stats = self.crawler.stats.get_stats()
-        for k, v in stats.items():
-            if isinstance(v, datetime.datetime):
-                stats[k] = v.strftime('%Y-%m-%d %H-%M-%S')
-        self.collection_scrapy_stats.insert(stats)
+        dict_tmp = {}
+        code_table = {"request_size": "downloader/request_bytes",
+                      "request_method_count": "downloader/request_count",
+                      "request_GET_count": "downloader/request_method_count/GET",
+                      "request_size": "downloader/response_bytes",
+                      "response_count": "downloader/response_count",
+                      "response_status_200": "downloader/response_status_count/200",
+                      "response_status_404": "downloader/response_status_count/404",
+                      "response_status_502": "downloader/response_status_count/502",
+                      "response_status_504": "downloader/response_status_count/504",
+                      "finish_time": "finish_time",
+                      "start_time": "start_time"}
+        for key, value in code_table.items():
+            if value in stats:
+                if isinstance(stats[value], datetime.datetime):
+                    dict_tmp[key] = stats[value].strftime('%Y-%m-%d %H-%M-%S')
+                else:
+                    dict_tmp[key] = str(stats[value])
+            else:
+                dict_tmp[key] = ''
+        self.collection_scrapy_stats.insert({now_date_str:dict_tmp})
 
         self.om.close_mongodb()
