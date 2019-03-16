@@ -7,7 +7,6 @@ from scrapy.xlib.pydispatch import dispatcher
 from scrapy import signals
 
 from weather_back.items import WeatherBackItem
-from operate_db import operate_redis
 from operate_db.operate_mongo import OperateMongodb
 import config
 
@@ -42,10 +41,9 @@ class WeatherSpider(scrapy.Spider):
         """
         提取县级url
         """
-        if response.status == 200:
-            # 删除所有县级地区 url 老数据
-            redis_conn = operate_redis.get_redis_conn()
-            redis_conn.delete(config.redis_list_name_config['COUNTY_URL'])
+        if 'exception' in response.url:
+            yield scrapy.Request(response.url, callback=self.parse)
+        elif response.status == 200:
             # 提取数据
             div_containera_bss = response.xpath('//div[@class="containera"]')
             div_containera_bs = div_containera_bss[len(div_containera_bss) - 1]
@@ -239,15 +237,9 @@ class WeatherSpider(scrapy.Spider):
         """
         TOWNSHIP_URL_ONE = 'http://forecast.weather.com.cn/town/weather1dn/'
         TOWNSHIP_URL_SEVEN = 'http://forecast.weather.com.cn/town/weathern/'
-        # if response.status == 200:
-        #     # 删除所有乡级地区 url 老数据
-        #     redis_conn = operate_redis.get_redis_conn()
-        #     redis_conn.delete(config.redis_list_name_config['TOWNSHIP_URL'])
-        #     # 删除当天爬取失败的数据
-        #     self.collection_life_weather.delete_many({'date':now_date_str})
-        #     self.collection_seven_days_weather.delete_many({'date':now_date_str})
-        #     self.collection_tf_hours_weather.delete_many({'date':now_date_str})
-        if response.status == 200:
+        if 'exception' in response.url:
+            yield scrapy.Request(response.url, callback=self.parse_county)
+        elif response.status == 200:
             # ===== 提取乡级 url ===== #
             title = response.xpath('/html/head/title/text()').extract_first()
             reg_title = re.compile(r'.*【(.*?)天气】.*')
@@ -286,7 +278,9 @@ class WeatherSpider(scrapy.Spider):
         """
         提取乡级七天天气数据
         """
-        if response.status == 200:
+        if 'exception' in response.url:
+            yield scrapy.Request(response.url, callback=self.parse_township_seven)
+        elif response.status == 200:
             title = response.xpath('/html/head/title/text()').extract_first()
             reg_title = re.compile(r'.*【(.*?)天气】.*')
             return_title = reg_title.search(title.replace(' ', ''))
@@ -313,7 +307,9 @@ class WeatherSpider(scrapy.Spider):
         """
         提取乡级24小时及生活助手数据
         """
-        if response.status == 200:
+        if 'exception' in response.url:
+            yield scrapy.Request(response.url, callback=self.parse_township_table_life)
+        elif response.status == 200:
             title = response.xpath('/html/head/title/text()').extract_first()
             reg_title = re.compile(r'.*【(.*?)天气】.*')
             return_title = reg_title.search(title.replace(' ', ''))
@@ -334,7 +330,7 @@ class WeatherSpider(scrapy.Spider):
         code_table = {"request_size": "downloader/request_bytes",
                       "request_method_count": "downloader/request_count",
                       "request_GET_count": "downloader/request_method_count/GET",
-                      "request_size": "downloader/response_bytes",
+                      "response_size": "downloader/response_bytes",
                       "response_count": "downloader/response_count",
                       "response_status_200": "downloader/response_status_count/200",
                       "response_status_404": "downloader/response_status_count/404",
@@ -350,6 +346,6 @@ class WeatherSpider(scrapy.Spider):
                     dict_tmp[key] = str(stats[value])
             else:
                 dict_tmp[key] = ''
-        self.collection_scrapy_stats.insert({now_date_str:dict_tmp})
+        self.collection_scrapy_stats.insert({'date': now_date_str,'data':dict_tmp})
 
         self.om.close_mongodb()

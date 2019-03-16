@@ -59,6 +59,7 @@ ROBOTSTXT_OBEY = True
 DOWNLOADER_MIDDLEWARES = {
 #    'weather_back.middlewares.IpProxy': 543,
    'weather_back.middlewares.UserAgent': 544,
+   'weather_back.middlewares.ProcessAllExceptionMiddleware':120,
 }
 
 # Enable or disable extensions
