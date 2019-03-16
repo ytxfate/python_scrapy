@@ -3,6 +3,8 @@ import logging
 import re
 import json
 import datetime
+from scrapy.xlib.pydispatch import dispatcher
+from scrapy import signals
 
 from weather_back.items import WeatherBackItem
 from operate_db import operate_redis
@@ -11,7 +13,7 @@ import config
 
 # now date
 now_date_str = datetime.datetime.now().strftime('%Y-%m-%d')
-to_day = datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+to_day = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 logging.FileHandler(filename='log/' + to_day + '.log', mode='a', encoding='utf-8')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -21,11 +23,15 @@ class WeatherSpider(scrapy.Spider):
     allowed_domains = ["weather.com.cn"]
     start_urls = ["http://www.weather.com.cn/weather1dn/101271601.shtml"]
     def __init__(self):
+        dispatcher.connect(self.spider_stopped, signals.engine_stopped)     #建立信号和槽，在爬虫结束时调用
+        # dispatcher.connect(self.spider_closed, signals.spider_closed)       #建立信号和槽，在爬虫关闭时调用
+
         self.om = OperateMongodb()
         mongo_db = self.om.get_mongodb_db()
         self.collection_seven_days_weather = mongo_db.get_collection('seven_days_weather')
         self.collection_tf_hours_weather = mongo_db.get_collection('tf_hours_weather')
         self.collection_life_weather = mongo_db.get_collection('life_weather')
+        self.collection_scrapy_stats = mongo_db.get_collection('scrapy_stats')
         
     def parse(self, response):
         """
@@ -313,3 +319,12 @@ class WeatherSpider(scrapy.Spider):
             self.parse_county_life(response, web_title, 'township')
         else:
             yield scrapy.Request(response.url, callback=self.parse_township_table_life)
+
+    def spider_stopped(self):
+        stats = self.crawler.stats.get_stats()
+        for k, v in stats.items():
+            if isinstance(v, datetime.datetime):
+                stats[k] = v.strftime('%Y-%m-%d %H-%M-%S')
+        self.collection_scrapy_stats.insert(stats)
+
+        self.om.close_mongodb()
