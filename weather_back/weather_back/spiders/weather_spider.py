@@ -341,7 +341,7 @@ class WeatherSpider(scrapy.Spider):
         for key, value in code_table.items():
             if value in stats:
                 if isinstance(stats[value], datetime.datetime):
-                    dict_tmp[key] = stats[value].strftime('%Y-%m-%d %H-%M-%S')
+                    dict_tmp[key] = stats[value].strftime('%Y-%m-%d %H:%M:%S')
                 else:
                     dict_tmp[key] = str(stats[value])
             else:
