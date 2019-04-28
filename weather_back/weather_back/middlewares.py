@@ -174,7 +174,7 @@ class ProcessAllExceptionMiddleware(object):
             #在日志中打印异常类型
             print('Got exception: %s' % (exception))
             #随意封装一个response，返回给spider
-            response = HtmlResponse(url='exception')
+            response = HtmlResponse(url=request.url, encoding='utf-8', status=503, body='')
             return response
         #打印出未捕获到的异常
         print('not contained exception: %s' %exception)
