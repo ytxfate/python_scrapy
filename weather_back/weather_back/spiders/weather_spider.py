@@ -182,6 +182,7 @@ class WeatherSpider(scrapy.Spider):
             }
         if dict_insert_mongo:
             self.collection_tf_hours_weather.insert(dict_insert_mongo)
+            logger.info('hours weather ' + title)
 
     def parse_county_life(self, response, title, area):
         """
@@ -230,6 +231,7 @@ class WeatherSpider(scrapy.Spider):
                     "life_info": list_end
                 }
             self.collection_life_weather.insert(dict_insert_mongo)
+            logger.info('life weather ' + title)
 
     def parse_county(self, response):
         """
@@ -298,7 +300,7 @@ class WeatherSpider(scrapy.Spider):
                 'county':web_title[:2],
                 "weather_info": format_weather_info
             }
-            logger.info('seven weather ' + title)
+            logger.info('seven weather ' + web_title)
             self.collection_seven_days_weather.insert(dict_insert_mongo)
         else:
             yield scrapy.Request(response.url, callback=self.parse_township_seven)
